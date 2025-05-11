@@ -61,17 +61,21 @@ namespace Seagull.Interior_01 {
         }
 
         private void turnOn(MonoBehaviour obj) {
-            // 查找是否有名为 "onTurnOn" 的 public 变量
-            var field = obj.GetType().GetField("onTurnOn", BindingFlags.Public | BindingFlags.Instance);
+        if (obj == null) {
+            Debug.LogError("Objeto nulo passado para turnOn.");
+            return;
+        }
+    
+        var field = obj.GetType().GetField("onTurnOn", BindingFlags.Public | BindingFlags.Instance);
+        if (field == null) {
+            Debug.LogError("Campo onTurnOn não encontrado.");
+            return;
+            }
 
-            // 检查该变量是否是 UnityEvent 类型
-            if (field == null || field.FieldType != typeof(UnityEvent)) return;
-            // 获取 UnityEvent 实例
             UnityEvent turnOnEvent = (UnityEvent)field.GetValue(obj);
-
-            // 调用 UnityEvent 的 Invoke 方法
             turnOnEvent?.Invoke();
         }
+
 
         private void turnOff(MonoBehaviour obj) {
             // 查找是否有名为 "onTurnOff" 的 public 变量

@@ -3,7 +3,7 @@ using UnityEngine;
 public class CameraFeed : MonoBehaviour
 {
     private WebCamTexture webcamTexture;
-    public Vector2 size = new Vector2(0.6f, 0.4f); // Largura x Altura em "tela"
+    public Vector2 size = new Vector2(0.9f, 0.6f); // Largura x Altura em "tela"
     private Camera mainCamera;
 
     void Start()
@@ -30,24 +30,19 @@ public class CameraFeed : MonoBehaviour
 
 
     void PositionInCorner()
-    {
-        if (mainCamera == null) return;
+{
+    if (mainCamera == null) return;
 
-        // Ponto no canto superior esquerdo (X=0, Y=1, Z=distância da câmera)
-        Vector3 viewportPosition = new Vector3(0f, 1f, 1f); // z=1f é a profundidade
+    Vector3 viewportPosition = new Vector3(0f, 1f, 1f);
+    Vector3 worldPosition = mainCamera.ViewportToWorldPoint(viewportPosition);
 
-        // Converte para coordenadas do mundo
-        Vector3 worldPosition = mainCamera.ViewportToWorldPoint(viewportPosition);
+    transform.position = worldPosition;
 
-        // Ajusta posição do Quad
-        transform.position = worldPosition;
+    // Aplica inversão horizontal (eixo X negativo)
+    transform.localScale = new Vector3(-size.x, size.y, 1f); 
 
-        // Redimensiona para a tela
-        transform.localScale = new Vector3(size.x, size.y, 1f);
-
-        // Gira o Quad para ficar virado para a câmera
-        transform.rotation = mainCamera.transform.rotation;
-    }
+    transform.rotation = mainCamera.transform.rotation;
+}
 
     void OnDisable()
     {

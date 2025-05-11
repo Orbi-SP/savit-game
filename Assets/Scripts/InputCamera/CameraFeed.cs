@@ -43,6 +43,16 @@ public class CameraFeed : MonoBehaviour
 
     transform.rotation = mainCamera.transform.rotation;
 }
+public Texture2D GetCurrentFrame()
+{
+    if (webcamTexture == null || !webcamTexture.isPlaying)
+        return null;
+
+    Texture2D snap = new Texture2D(webcamTexture.width, webcamTexture.height, TextureFormat.RGB24, false);
+    snap.SetPixels(webcamTexture.GetPixels());
+    snap.Apply();
+    return snap;
+}
 
     void OnDisable()
     {

@@ -988,7 +988,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 545551b9dce9d8f45be5bfe5ef1a85b8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2141434780}
   m_SourcePrefab: {fileID: 100100000, guid: 545551b9dce9d8f45be5bfe5ef1a85b8, type: 3}
 --- !u!114 &541442952 stripped
 MonoBehaviour:
@@ -2197,6 +2200,27 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c5f868f465e50e943902cf18499f2d31, type: 3}
+--- !u!1 &2141434776 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 545551b9dce9d8f45be5bfe5ef1a85b8, type: 3}
+  m_PrefabInstance: {fileID: 527147211}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2141434780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141434776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cf594395ae02e140b78f7540440a3c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  apiURL: http://127.0.0.1:5000
+  cameraFeed: {fileID: 1671543330}
+  ramObject: {fileID: 2141434776}
+  liftAmount: 0.1
 --- !u!1001 &1643829560639908485
 PrefabInstance:
   m_ObjectHideFlags: 0

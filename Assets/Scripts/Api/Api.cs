@@ -80,7 +80,7 @@ public class Api : MonoBehaviour
             : originalRamPosition;
 
         Quaternion targetRot = isHolding 
-            ? Quaternion.Euler(90f, originalRamRotation.eulerAngles.y, originalRamRotation.eulerAngles.z)
+            ? Quaternion.Euler(-90f, originalRamRotation.eulerAngles.y, originalRamRotation.eulerAngles.z)
             : originalRamRotation;
 
         // Transição suave para a nova posição e rotação

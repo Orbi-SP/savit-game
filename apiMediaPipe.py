@@ -17,52 +17,57 @@ mp_draw = mp.solutions.drawing_utils
 
 def detectar_mao(img):
     """
-    Detecta a mão usando o MediaPipe Hands e determina se a mão está
-    "Free" (mão aberta) ou "Hold" (mão fechada), com base na contagem
-    de dedos estendidos.
-
-    A lógica para dedos:
-    - Para os dedos (indicador, médio, anelar e mínimo): se a ponta (landmark tip)
-      estiver acima da respectiva articulação (landmark PIP), considera-se que o dedo está estendido.
-    - Para o polegar: realiza uma verificação lateral (usando landmarks 4 e 2).
+    Detecta a mão usando o MediaPipe Hands e determina:
+    - O estado da mão: "Free" (mão aberta) ou "Hold" (mão fechada), 
+      baseado na contagem dos dedos estendidos (indicador, médio, anelar, mínimo e polegar).
+    - A posição horizontal da mão na imagem, dividida em três partes: Left, Center e Right.
     
-    Se nenhum dedo for considerado como estendido ou se não houver mão detectada,
-    a função retorna "Free" por padrão.
+    Se nenhum mão for detectada, retorna "Free Center" como valor padrão.
     """
-    # Redimensiona a imagem para processamento
+    # Redimensiona a imagem para processamento (320x240)
     img = cv2.resize(img, (320, 240))
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    # Processa a imagem para detectar a mão
+    # Processa a imagem com MediaPipe Hands
     results = hands.process(img_rgb)
     
-    # Se nenhuma mão for detectada, retorna "Free"
+    # Se nenhuma mão for detectada, assumir "Free Center"
     if not results.multi_hand_landmarks:
-        return "Free"
+        return "Free Center"
     
     # Considera a primeira mão detectada (máximo 1)
     hand_landmarks = results.multi_hand_landmarks[0]
-    # (Opcional) Caso deseje desenhar os landmarks, descomente a linha abaixo:
-    # mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-    
     landmarks = hand_landmarks.landmark
     extended_fingers = 0
 
-    # Verifica se cada dedo está estendido (considerando o eixo y: menor valor significa mais alto na imagem)
-    if landmarks[8].y < landmarks[6].y:      # Indicador
+    # Verifica se cada dedo está estendido (eixo y: menor valor indica posição mais alta na imagem)
+    if landmarks[8].y < landmarks[6].y:      # Dedo indicador
         extended_fingers += 1
-    if landmarks[12].y < landmarks[10].y:    # Médio
+    if landmarks[12].y < landmarks[10].y:    # Dedo médio
         extended_fingers += 1
-    if landmarks[16].y < landmarks[14].y:    # Anelar
+    if landmarks[16].y < landmarks[14].y:    # Dedo anelar
         extended_fingers += 1
-    if landmarks[20].y < landmarks[18].y:    # Mínimo
+    if landmarks[20].y < landmarks[18].y:    # Dedo mínimo
         extended_fingers += 1
     if landmarks[4].x > landmarks[2].x:      # Polegar (verificação lateral para mão direita)
         extended_fingers += 1
 
-    return "Free" if extended_fingers > 1 else "Hold"
+    # Se mais de 1 dedo estiver estendido, consideramos como "Free", caso contrário "Hold"
+    state = "Free" if extended_fingers > 1 else "Hold"
+    
+    # Calcula a posição horizontal da mão com a média dos valores normalizados dos x dos landmarks
+    avg_x = sum([lm.x for lm in landmarks]) / len(landmarks)
+    if avg_x < 0.33:
+        pos = "Left"
+    elif avg_x > 0.66:
+        pos = "Right"
+    else:
+        pos = "Center"
+    
+    # Retorna uma string combinando o estado e a posição, ex: "Free Left" ou "Hold Center"
+    return f"{state} {pos}"
 
-# Rota da API para receber imagem e retornar o estado da mão
+# Rota da API que recebe a imagem via POST e retorna o resultado (estado e posição da mão)
 @app.route('/', methods=['POST'])
 def analisar():
     img_bytes = request.data

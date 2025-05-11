@@ -4,16 +4,23 @@ using UnityEngine.Networking;
 
 public class Api : MonoBehaviour
 {
-    public string apiURL = "http://127.0.0.1:5000"; // Altere aqui
+    public string apiURL = "http://127.0.0.1:5000"; // Altere conforme necessário
     public CameraFeed cameraFeed;
     public GameObject ramObject;
 
-    // Variáveis para armazenar a posição e rotação originais do objeto
+    // Armazena a posição e a rotação originais para referência
     private Vector3 originalRamPosition;
     private Quaternion originalRamRotation;
 
-    // Variável que controla se o gesto é HOLD ou FREE
+    // Controle do gesto: isHolding indica "hold" ou "free", currentSide indica a direção ("left", "center", "right")
     private bool isHolding = false;
+    private string currentSide = "center";
+
+    // Deslocamento acumulado no eixo Z, atualizado conforme a resposta da API
+    private float accumulatedZ;
+
+    // Flag que indica se a RAM já foi encaixada (snap) no slot
+    private bool isSnapped = false;
 
     void Start()
     {
@@ -21,6 +28,7 @@ public class Api : MonoBehaviour
         {
             originalRamPosition = ramObject.transform.position;
             originalRamRotation = ramObject.transform.rotation;
+            accumulatedZ = originalRamPosition.z;
         }
 
         StartCoroutine(SendToApiRoutine());
@@ -55,9 +63,36 @@ public class Api : MonoBehaviour
 
             if (www.result == UnityWebRequest.Result.Success)
             {
-                string response = www.downloadHandler.text.Trim();
+                // Exemplo de resposta: "hold left", "free right" ou "free center"
+                string response = www.downloadHandler.text.Trim().ToLower();
                 Debug.Log("Resposta da API: " + response);
-                isHolding = response.ToLower() == "hold";
+
+                string[] parts = response.Split(' ');
+                if (parts.Length >= 2)
+                {
+                    isHolding = parts[0] == "hold";
+                    string newSide = parts[1]; // "left", "center" ou "right"
+                    currentSide = newSide;
+
+                    // Atualiza o deslocamento acumulado no eixo Z com base na direção:
+                    // Se for "right": incrementa (movimenta para a direita)
+                    // Se for "left": decrementa (movimenta para a esquerda)
+                    if (newSide == "right")
+                    {
+                        accumulatedZ += 0.3f;
+                    }
+                    else if (newSide == "left")
+                    {
+                        accumulatedZ -= 0.3f;
+                    }
+                    // Se for "center", o Lerp no Update retornará suavemente ao valor original.
+                }
+                else
+                {
+                    // Caso a resposta seja apenas "hold" ou "free", assume "center" para a direção
+                    isHolding = response == "hold";
+                    currentSide = "center";
+                }
             }
             else
             {
@@ -70,21 +105,47 @@ public class Api : MonoBehaviour
 
     void Update()
     {
-        if (ramObject == null) return;
+        if (ramObject == null)
+            return;
 
-        // Define posição e rotação alvo com base na resposta da API:
-        // Se HOLD: posição Y = 5.5 e rotação X = 90 graus (mantendo os demais componentes originais)
-        // Se FREE: mantém a posição e rotação originais.
-        Vector3 targetPos = isHolding 
-            ? new Vector3(originalRamPosition.x, 5.5f, originalRamPosition.z)
-            : originalRamPosition;
+        // Se o objeto já foi encaixado, não atualizamos sua posição
+        if (isSnapped)
+            return;
 
-        Quaternion targetRot = isHolding 
+        // Se a resposta for "center", suavemente retorna o acumulado no eixo Z ao valor original.
+        if (currentSide == "center")
+        {
+            accumulatedZ = Mathf.Lerp(accumulatedZ, originalRamPosition.z, Time.deltaTime * 5f);
+        }
+
+        // Define a posição alvo:
+        // - O eixo X permanece o da posição original.
+        // - O eixo Y é definido para 5.5 se estiver em hold; caso contrário, permanece o valor original.
+        // - O eixo Z utiliza o deslocamento acumulado.
+        float targetY = isHolding ? 5.5f : originalRamPosition.y;
+        Vector3 targetPos = new Vector3(originalRamPosition.x, targetY, accumulatedZ);
+
+        // Verifica se a posição alvo está entre Z = -17 e Z = -12
+        if (!isHolding && targetPos.z >= -17f && targetPos.z <= -12f)
+        {
+            // Ao detectar que o objeto está "free" e dentro do intervalo,
+            // realiza o snap definindo a posição X = -38.5 e Z = -16, com rotação X = -90°.
+            Vector3 snapPos = new Vector3(-38.5f, targetPos.y, -16f);
+            Quaternion snapRot = Quaternion.Euler(-90f, originalRamRotation.eulerAngles.y, originalRamRotation.eulerAngles.z);
+            ramObject.transform.position = snapPos;
+            ramObject.transform.rotation = snapRot;
+            isSnapped = true;
+            Debug.Log("Snap acionado automaticamente: posição X = -38.5 e Z = -16.");
+            return;
+        }
+
+        // Atualiza o objeto com transição suave para a posição e rotação alvo
+        ramObject.transform.position = Vector3.Lerp(ramObject.transform.position, targetPos, Time.deltaTime * 5f);
+
+        Quaternion targetRot = isHolding
             ? Quaternion.Euler(-90f, originalRamRotation.eulerAngles.y, originalRamRotation.eulerAngles.z)
             : originalRamRotation;
 
-        // Transição suave para a nova posição e rotação
-        ramObject.transform.position = Vector3.Lerp(ramObject.transform.position, targetPos, Time.deltaTime * 5f);
         ramObject.transform.rotation = Quaternion.Lerp(ramObject.transform.rotation, targetRot, Time.deltaTime * 5f);
     }
 }

@@ -951,7 +951,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 545551b9dce9d8f45be5bfe5ef1a85b8, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -20.65
+      value: -20
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 545551b9dce9d8f45be5bfe5ef1a85b8, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1882,7 +1882,6 @@ MonoBehaviour:
   apiURL: http://127.0.0.1:5000
   cameraFeed: {fileID: 1671543330}
   ramObject: {fileID: 2141434776}
-  liftAmount: 0.1
 --- !u!1001 &1684840232
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2237,7 +2236,6 @@ MonoBehaviour:
   apiURL: http://127.0.0.1:5000
   cameraFeed: {fileID: 1671543330}
   ramObject: {fileID: 2141434776}
-  liftAmount: 0.1
 --- !u!1001 &1643829560639908485
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -6,6 +6,12 @@
 
 O Projeto SAVIT (Sistema de Aprendizado Virtual de Infraestrutura de T.I.) é um jogo que guiará você a aprender sobre conteúdos sobre Computadores, DVR, Firewalls, Unifi's, entre outras coisas voltadas ao universo de redes e infraestrutura. 
 
+## Demonstração
+
+Assista a uma demonstração prática do projeto em funcionamento no vídeo abaixo:
+
+[![Assista no YouTube](https://img.youtube.com/vi/AxcnQyhpZwc/0.jpg)](https://www.youtube.com/watch?v=AxcnQyhpZwc)
+
 ## Como Utilizar
 Como o Software atualmente está em desenvolvimento e não há uma versão de build que funcione corretamente, você precisará ter acesso aos itens abaixo:
 

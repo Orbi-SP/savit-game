@@ -1,7 +1,7 @@
 # PROJETO SAVIT
 
 <p align="center">
-  <img src="Public/logo_projeto.png" alt="Logo do Projeto" />
+  <img src="Imgs/logo_projeto.png" alt="Logo do Projeto" />
 </p>
 
 O Projeto SAVIT (Sistema de Aprendizado Virtual de Infraestrutura de T.I.) é um jogo que guiará você a aprender sobre conteúdos sobre Computadores, DVR, Firewalls, Unifi's, entre outras coisas voltadas ao universo de redes e infraestrutura. 

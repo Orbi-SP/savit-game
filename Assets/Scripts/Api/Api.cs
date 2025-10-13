@@ -15,6 +15,8 @@ public class Api : MonoBehaviour
     // Controle do gesto: isHolding indica "hold" ou "free", currentSide indica a direção ("left", "center", "right")
     private bool isHolding = false;
     private string currentSide = "center";
+    public bool IsHolding => isHolding;
+    public string CurrentSide => currentSide; // "left", "center", "right"
 
     // Deslocamento acumulado no eixo Z, atualizado conforme a resposta da API
     private float accumulatedZ;

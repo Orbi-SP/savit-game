@@ -4,36 +4,69 @@ using UnityEngine.Networking;
 
 public class Api : MonoBehaviour
 {
-    public string apiURL = "http://127.0.0.1:5000"; // Altere conforme necessário
+    [Header("Configurações API")]
+    public string apiURL = "http://127.0.0.1:5000"; // URL da API
     public CameraFeed cameraFeed;
-    public GameObject ramObject;
 
-    // Armazena a posição e a rotação originais para referência
-    private Vector3 originalRamPosition;
-    private Quaternion originalRamRotation;
+    [Header("Objeto a controlar")]
+    public GameObject objectToMove; // Pode ser RAM, placa-mãe, etc.
+    public enum SceneType { RAM, Gabinete, OutraCena }
+    public SceneType currentScene;
 
-    // Controle do gesto: isHolding indica "hold" ou "free", currentSide indica a direção ("left", "center", "right")
+    // Posição e rotação originais do objeto
+    private Vector3 originalObjectPosition;
+    private Quaternion originalObjectRotation;
+
+    // Controle do gesto
     private bool isHolding = false;
     private string currentSide = "center";
     public bool IsHolding => isHolding;
-    public string CurrentSide => currentSide; // "left", "center", "right"
+    public string CurrentSide => currentSide;
 
-    // Deslocamento acumulado no eixo Z, atualizado conforme a resposta da API
+    // Deslocamento acumulado no eixo Z (ou eixo de movimento)
     private float accumulatedZ;
 
-    // Flag que indica se a RAM já foi encaixada (snap) no slot
+    // Flag de snap
     private bool isSnapped = false;
 
     void Start()
     {
-        if (ramObject != null)
+        if (objectToMove != null)
         {
-            originalRamPosition = ramObject.transform.position;
-            originalRamRotation = ramObject.transform.rotation;
-            accumulatedZ = originalRamPosition.z;
+            // Define a posição e rotação inicial de acordo com a cena
+            SetPositionBasedOnScene(currentScene);
+
+            // Agora salva a posição e rotação originais
+            originalObjectPosition = objectToMove.transform.position;
+            originalObjectRotation = objectToMove.transform.rotation;
+
+            // Inicializa o eixo de movimento corretamente
+            accumulatedZ = originalObjectPosition.z;
         }
 
         StartCoroutine(SendToApiRoutine());
+    }
+
+    // Ajusta a posição do objeto dependendo da cena
+    void SetPositionBasedOnScene(SceneType scene)
+    {
+        switch (scene)
+        {
+            case SceneType.RAM:
+                objectToMove.transform.position = new Vector3(10f, 0f, 5f); // ajuste conforme necessário
+                objectToMove.transform.rotation = Quaternion.identity; 
+                Debug.Log("Posição da RAM: " + objectToMove.transform.position);
+                break;
+            case SceneType.Gabinete:
+                objectToMove.transform.position = new Vector3(-61.99f, 4.61f, -13.35f);
+                objectToMove.transform.rotation = Quaternion.identity; 
+                Debug.Log("Posição do Gabinete: " + objectToMove.transform.position);
+                break;
+            case SceneType.OutraCena:
+                objectToMove.transform.position = new Vector3(0f, 0f, 0f);
+                objectToMove.transform.rotation = Quaternion.identity; 
+                break;
+        }
     }
 
     IEnumerator SendToApiRoutine()
@@ -54,7 +87,7 @@ public class Api : MonoBehaviour
             }
 
             byte[] imageBytes = frame.EncodeToJPG();
-            Destroy(frame); // Libera a memória
+            Destroy(frame);
 
             UnityWebRequest www = new UnityWebRequest(apiURL, "POST");
             www.uploadHandler = new UploadHandlerRaw(imageBytes);
@@ -65,7 +98,6 @@ public class Api : MonoBehaviour
 
             if (www.result == UnityWebRequest.Result.Success)
             {
-                // Exemplo de resposta: "hold left", "free right" ou "free center"
                 string response = www.downloadHandler.text.Trim().ToLower();
                 Debug.Log("Resposta da API: " + response);
 
@@ -73,25 +105,14 @@ public class Api : MonoBehaviour
                 if (parts.Length >= 2)
                 {
                     isHolding = parts[0] == "hold";
-                    string newSide = parts[1]; // "left", "center" ou "right"
+                    string newSide = parts[1];
                     currentSide = newSide;
 
-                    // Atualiza o deslocamento acumulado no eixo Z com base na direção:
-                    // Se for "right": incrementa (movimenta para a direita)
-                    // Se for "left": decrementa (movimenta para a esquerda)
-                    if (newSide == "right")
-                    {
-                        accumulatedZ += 0.3f;
-                    }
-                    else if (newSide == "left")
-                    {
-                        accumulatedZ -= 0.3f;
-                    }
-                    // Se for "center", o Lerp no Update retornará suavemente ao valor original.
+                    if (newSide == "right") accumulatedZ += 0.3f;
+                    else if (newSide == "left") accumulatedZ -= 0.3f;
                 }
                 else
                 {
-                    // Caso a resposta seja apenas "hold" ou "free", assume "center" para a direção
                     isHolding = response == "hold";
                     currentSide = "center";
                 }
@@ -101,53 +122,40 @@ public class Api : MonoBehaviour
                 Debug.LogWarning("Erro na API: " + www.error);
             }
 
-            yield return new WaitForSeconds(0.5f); // Intervalo entre requisições
+            yield return new WaitForSeconds(0.5f);
         }
     }
 
     void Update()
     {
-        if (ramObject == null)
-            return;
+        if (objectToMove == null || isSnapped) return;
 
-        // Se o objeto já foi encaixado, não atualizamos sua posição
-        if (isSnapped)
-            return;
-
-        // Se a resposta for "center", suavemente retorna o acumulado no eixo Z ao valor original.
+        // Se a mão estiver "center", suaviza o retorno da posição
         if (currentSide == "center")
         {
-            accumulatedZ = Mathf.Lerp(accumulatedZ, originalRamPosition.z, Time.deltaTime * 5f);
+            accumulatedZ = Mathf.Lerp(accumulatedZ, originalObjectPosition.z, Time.deltaTime * 5f);
         }
 
-        // Define a posição alvo:
-        // - O eixo X permanece o da posição original.
-        // - O eixo Y é definido para 5.5 se estiver em hold; caso contrário, permanece o valor original.
-        // - O eixo Z utiliza o deslocamento acumulado.
-        float targetY = isHolding ? 5.5f : originalRamPosition.y;
-        Vector3 targetPos = new Vector3(originalRamPosition.x, targetY, accumulatedZ);
+        float targetY = isHolding ? 5.5f : originalObjectPosition.y;
+        Vector3 targetPos = new Vector3(originalObjectPosition.x, targetY, accumulatedZ);
 
-        // Verifica se a posição alvo está entre Z = -17 e Z = -12
+        // Snap automático quando soltar a mão (opcional: ajuste limites)
         if (!isHolding && targetPos.z >= -17f && targetPos.z <= -12f)
         {
-            // Ao detectar que o objeto está "free" e dentro do intervalo,
-            // realiza o snap definindo a posição X = -38.5 e Z = -16, com rotação X = -90°.
             Vector3 snapPos = new Vector3(-38.5f, targetPos.y, -16f);
-            Quaternion snapRot = Quaternion.Euler(-90f, originalRamRotation.eulerAngles.y, originalRamRotation.eulerAngles.z);
-            ramObject.transform.position = snapPos;
-            ramObject.transform.rotation = snapRot;
+            Quaternion snapRot = Quaternion.Euler(-90f, originalObjectRotation.eulerAngles.y, originalObjectRotation.eulerAngles.z);
+            objectToMove.transform.position = snapPos;
+            objectToMove.transform.rotation = snapRot;
             isSnapped = true;
             Debug.Log("Snap acionado automaticamente: posição X = -38.5 e Z = -16.");
             return;
         }
 
-        // Atualiza o objeto com transição suave para a posição e rotação alvo
-        ramObject.transform.position = Vector3.Lerp(ramObject.transform.position, targetPos, Time.deltaTime * 5f);
-
+        // Transição suave para a posição alvo
+        objectToMove.transform.position = Vector3.Lerp(objectToMove.transform.position, targetPos, Time.deltaTime * 5f);
         Quaternion targetRot = isHolding
-            ? Quaternion.Euler(-90f, originalRamRotation.eulerAngles.y, originalRamRotation.eulerAngles.z)
-            : originalRamRotation;
-
-        ramObject.transform.rotation = Quaternion.Lerp(ramObject.transform.rotation, targetRot, Time.deltaTime * 5f);
+            ? Quaternion.Euler(-90f, originalObjectRotation.eulerAngles.y, originalObjectRotation.eulerAngles.z)
+            : originalObjectRotation;
+        objectToMove.transform.rotation = Quaternion.Lerp(objectToMove.transform.rotation, targetRot, Time.deltaTime * 5f);
     }
 }

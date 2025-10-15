@@ -1,3 +1,4 @@
+//MotherboardPlacer.cs
 using UnityEngine;
 
 public class MotherboardPlacer : MonoBehaviour
@@ -30,41 +31,38 @@ public class MotherboardPlacer : MonoBehaviour
     {
         if (isSnapped || api == null) return;
 
-        bool holding = api.IsHolding;
-        string side = api.CurrentSide; // "left","center","right"
+        bool holding = api.IsHolding;  // True se a mão estiver fechada
+        string side = api.CurrentSide; // "left", "center", "right"
 
-        // Direção: left=-1, right=+1, center=0
+        // Calcula direção lateral
         float dir = side == "right" ? +1f : side == "left" ? -1f : 0f;
 
-        // Integra por tempo p/ velocidade consistente
+        // Acumula deslocamento lateral
         accum += dir * moveSpeed * Time.deltaTime;
 
-        // Se center, volta suavemente pro zero
+        // Suaviza se center
         if (side == "center")
             accum = Mathf.Lerp(accum, 0f, Time.deltaTime * 5f);
 
-        // Limites
+        // Limita o deslocamento
         accum = Mathf.Clamp(accum, moveLimits.x, moveLimits.y);
 
         // Monta posição alvo
         Vector3 target = originalPos;
-        if (useAxisX) target.x = originalPos.x + accum;
-        else          target.z = originalPos.z + accum;
-        target.y = holding ? liftY : originalPos.y;
+        if (useAxisX) target.x = originalPos.x + accum; // move no eixo X
+        else          target.z = originalPos.z + accum; // move no eixo Z
+        target.y = holding ? liftY : originalPos.y;      // sobe no Y se estiver segurando
 
-        // Transição Hold -> Free: tentativa de snap se estiver dentro da zona
+        // Atualiza suavemente a posição e mantém rotação
+        transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 5f);
+        transform.rotation = originalRot;
+
+        // Snap se necessário
         if (prevHolding && !holding && IsInsideZone(transform.position))
         {
             DoSnap();
             return;
         }
-
-        // Suaviza posição/rotação enquanto não snapado
-        transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 5f);
-        Quaternion targetRot = holding
-            ? Quaternion.Euler(-90f, originalRot.eulerAngles.y, originalRot.eulerAngles.z)
-            : originalRot;
-        transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.deltaTime * 5f);
 
         prevHolding = holding;
     }

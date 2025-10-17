@@ -3,22 +3,19 @@ using UnityEngine;
 public class MotherboardPlacer : MonoBehaviour
 {
     [Header("Referências")]
-    public Api api;
-    public BoxCollider snapZone;     // BoxCollider (IsTrigger) da área de encaixe
-    public Transform snapAnchor;     // Transform final da placa
+    public Api api;                  // arraste o objeto que tem o Api.cs
+    public BoxCollider snapZone;     // arraste a MotherboardSnapZone (BoxCollider com IsTrigger)
+    public Transform snapAnchor;     // posição e rotação final da placa-mãe
 
     [Header("Movimento")]
-    public bool useAxisX = true;
-    public float moveSpeed = 2.0f;
-    public float liftY = 6.5f;
-    public Vector2 moveLimits = new Vector2(-0.5f, 0.5f);
+    public bool useAxisX = true;     // true = mover no eixo X; false = no Z
+    public float moveSpeed = 2.0f;   // velocidade de movimento lateral
+    public float liftY = 6.5f;       // altura ao segurar (pode ajustar)
+    public Vector2 moveLimits = new Vector2(-0.5f, 0.5f); // limites laterais
 
-    [Header("Snap")]
+    [Header("Configuração do Snap")]
     [Tooltip("Margem de tolerância no plano X/Z para encaixe.")]
     public float snapTolerance = 0.05f;
-
-    [Header("Debug")]
-    public bool drawSnapGizmo = true;   // liga/desliga gizmo
 
     private Vector3 originalPos;
     private Quaternion originalRot;
@@ -40,40 +37,48 @@ public class MotherboardPlacer : MonoBehaviour
         bool holding = api.IsHolding;
         string side = api.CurrentSide;
 
-        // move lateral só enquanto segura
+        // Movimenta lateralmente apenas enquanto segura
         float dir = holding ? (side == "right" ? -1f : side == "left" ? +1f : 0f) : 0f;
         accum += dir * moveSpeed * Time.deltaTime;
 
+        // Retorna suavemente para o centro se estiver segurando e com a mão no centro
         if (holding && side == "center")
             accum = Mathf.Lerp(accum, 0f, Time.deltaTime * 5f);
 
         accum = Mathf.Clamp(accum, moveLimits.x, moveLimits.y);
 
+        // Define a posição alvo
         Vector3 target = originalPos;
         if (useAxisX) target.x = originalPos.x + accum;
         else          target.z = originalPos.z + accum;
         target.y = holding ? liftY : originalPos.y;
 
+        // Move suavemente e mantém a rotação original
         transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 5f);
         transform.rotation = originalRot;
 
-        // snap só ao SOLTAR e se estiver alinhado em X/Z com a zona
-        if (prevHolding && !holding && IsAlignedXZ(transform.position))
+        // Quando soltar, verifica se está alinhado em X/Z com a zona de snap
+        if (prevHolding && !holding)
         {
-            DoSnap();
-            return;
+            if (IsAlignedXZ(transform.position))
+            {
+                DoSnap();
+                return;
+            }
         }
 
         prevHolding = holding;
     }
 
-    // ✔️ Checagem em X/Z no espaço local da zona (NÃO multiplica por lossyScale)
+    /// <summary>
+    /// Verifica se a placa está dentro da área de snap no plano X/Z (ignora Y)
+    /// </summary>
     bool IsAlignedXZ(Vector3 worldPos)
     {
         if (snapZone == null) return false;
 
         Vector3 local = snapZone.transform.InverseTransformPoint(worldPos);
-        Vector3 half = snapZone.size * 0.5f;
+        Vector3 half = Vector3.Scale(snapZone.size * 0.5f, snapZone.transform.lossyScale);
 
         bool insideX = Mathf.Abs(local.x) <= (half.x + snapTolerance);
         bool insideZ = Mathf.Abs(local.z) <= (half.z + snapTolerance);
@@ -81,6 +86,9 @@ public class MotherboardPlacer : MonoBehaviour
         return insideX && insideZ;
     }
 
+    /// <summary>
+    /// Move e rotaciona o objeto até o snapAnchor (ou fallback se não houver)
+    /// </summary>
     void DoSnap()
     {
         if (snapAnchor != null)
@@ -89,6 +97,7 @@ public class MotherboardPlacer : MonoBehaviour
         }
         else
         {
+            // fallback: mantém X/Z e ajusta apenas altura e rotação
             Vector3 p = transform.position;
             transform.SetPositionAndRotation(
                 new Vector3(p.x, originalPos.y, p.z),
@@ -102,22 +111,29 @@ public class MotherboardPlacer : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        if (!drawSnapGizmo || snapZone == null) return;
+        Gizmos.color = Color.cyan;
+        Vector3 a = transform.position + (useAxisX ? Vector3.right : Vector3.forward) * moveLimits.x;
+        Vector3 b = transform.position + (useAxisX ? Vector3.right : Vector3.forward) * moveLimits.y;
+        Gizmos.DrawLine(a, b);
 
-        // ⚠️ Não multiplica por lossyScale AQUI, pois a matrix já contém a escala
-        Gizmos.color = Color.green;
-        Matrix4x4 prev = Gizmos.matrix;
-        Gizmos.matrix = snapZone.transform.localToWorldMatrix;
+        if (snapZone != null)
+        {
+            Gizmos.color = Color.green;
+            Matrix4x4 prev = Gizmos.matrix;
+            Gizmos.matrix = snapZone.transform.localToWorldMatrix;
 
-        // desenha um wire cube com tolerância extra no plano X/Z
-        Vector3 sizeWithTol = new Vector3(
-            snapZone.size.x + 2f * snapTolerance,
-            snapZone.size.y, // Y não importa pro teste, mas desenhamos pra visualizar
-            snapZone.size.z + 2f * snapTolerance
-        );
+            Vector3 sz = Vector3.Scale(snapZone.size, snapZone.transform.lossyScale);
+            Vector3 p0 = new Vector3(-sz.x/2 - snapTolerance, 0f, -sz.z/2 - snapTolerance);
+            Vector3 p1 = new Vector3( sz.x/2 + snapTolerance, 0f, -sz.z/2 - snapTolerance);
+            Vector3 p2 = new Vector3( sz.x/2 + snapTolerance, 0f,  sz.z/2 + snapTolerance);
+            Vector3 p3 = new Vector3(-sz.x/2 - snapTolerance, 0f,  sz.z/2 + snapTolerance);
 
-        Gizmos.DrawWireCube(Vector3.zero, sizeWithTol);
+            Gizmos.DrawLine(p0, p1);
+            Gizmos.DrawLine(p1, p2);
+            Gizmos.DrawLine(p2, p3);
+            Gizmos.DrawLine(p3, p0);
 
-        Gizmos.matrix = prev;
+            Gizmos.matrix = prev;
+        }
     }
 }

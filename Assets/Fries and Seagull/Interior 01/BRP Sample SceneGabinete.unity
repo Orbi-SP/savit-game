@@ -171,7 +171,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.03, y: 0.0365, z: 0.001}
+  m_Size: {x: 0.05, y: 0.037, z: 0.09}
   m_Center: {x: 0.014, y: -0.0164, z: 0.01713}
 --- !u!1001 &87554622
 PrefabInstance:
@@ -1413,7 +1413,8 @@ MonoBehaviour:
   moveSpeed: 2
   liftY: 6.2
   moveLimits: {x: -6, y: 3}
-  snapTolerance: 0.05
+  snapTolerance: 0
+  drawSnapGizmo: 1
 --- !u!1001 &987020515
 PrefabInstance:
   m_ObjectHideFlags: 0

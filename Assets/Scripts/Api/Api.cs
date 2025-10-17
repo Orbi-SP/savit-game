@@ -40,6 +40,28 @@ public class Api : MonoBehaviour
         StartCoroutine(SendToApiRoutine());
     }
 
+    // Ajusta a posição do objeto dependendo da cena
+    void SetPositionBasedOnScene(SceneType scene)
+    {
+        switch (scene)
+        {
+            case SceneType.RAM:
+                objectToMove.transform.position = new Vector3(10f, 0f, 5f); // ajuste conforme necessário
+                objectToMove.transform.rotation = Quaternion.identity; 
+                Debug.Log("Posição da RAM: " + objectToMove.transform.position);
+                break;
+            case SceneType.Gabinete:
+                objectToMove.transform.position = new Vector3(-61.99f, 4.61f, -13.35f);
+                objectToMove.transform.rotation = Quaternion.identity; 
+                Debug.Log("Posição do Gabinete: " + objectToMove.transform.position);
+                break;
+            case SceneType.OutraCena:
+                objectToMove.transform.position = new Vector3(0f, 0f, 0f);
+                objectToMove.transform.rotation = Quaternion.identity; 
+                break;
+        }
+    }
+
     IEnumerator SendToApiRoutine()
     {
         while (true)
@@ -58,6 +80,7 @@ public class Api : MonoBehaviour
             }
 
             byte[] imageBytes = frame.EncodeToJPG();
+            Destroy(frame);
             Destroy(frame);
 
             var www = new UnityWebRequest(apiURL, "POST");
@@ -89,6 +112,7 @@ public class Api : MonoBehaviour
                 Debug.LogWarning("Erro na API: " + www.error);
             }
 
+            yield return new WaitForSeconds(0.5f);
             yield return new WaitForSeconds(0.5f);
         }
     }

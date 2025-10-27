@@ -6,7 +6,7 @@ public class MotherboardPlacer : MonoBehaviour
     public Api api;
     public BoxCollider snapZone;     // BoxCollider (IsTrigger) da área de encaixe
     public Transform snapAnchor;     // Transform final da placa
-
+    public MotherboardState motherboardState; // arraste aqui no Inspector
     [Header("Movimento")]
     public bool useAxisX = true;
     public float moveSpeed = 2.0f;
@@ -59,13 +59,18 @@ public class MotherboardPlacer : MonoBehaviour
 
         // snap só ao SOLTAR e se estiver alinhado em X/Z com a zona
         if (prevHolding && !holding && IsAlignedXZ(transform.position))
-        {
-            DoSnap();
-            return;
-        }
-
-        prevHolding = holding;
-    }
+                {
+                    if (motherboardState != null && !motherboardState.HasRequiredMemory)
+                    {
+                        Debug.Log("Instale a memória RAM na placa antes de colocá-la no gabinete.");
+                        prevHolding = holding;
+                        return;
+                    }
+                    DoSnap();
+                    return;
+                }
+                prevHolding = holding;
+            }
 
     // ✔️ Checagem em X/Z no espaço local da zona (NÃO multiplica por lossyScale)
     bool IsAlignedXZ(Vector3 worldPos)

@@ -18,6 +18,8 @@ public class Api : MonoBehaviour
     private string currentSide = "center";
     public bool IsHolding => isHolding;          // true = mão fechada
     public string CurrentSide => currentSide;    // "left" | "center" | "right"
+    public GameObject currentHeld;               // atribuído pelo seu pickup quando pegar um objeto
+    bool prevHolding = false;
 
     // ==== Estado interno (só usado se o Api controla o objeto) ====
     private Vector3 originalPos;
@@ -95,12 +97,27 @@ public class Api : MonoBehaviour
 
     void Update()
     {
-        // 👉 Se NÃO for cena RAM, o Api NÃO mexe em transform (evita briga com MotherboardPlacer)
+        // Notifica liberação (transição prevHolding -> !isHolding)
+        if (prevHolding && !isHolding)
+        {
+            if (currentHeld != null)
+            {
+                // CHAME APENAS A INTERFACE
+                var releasable = currentHeld.GetComponent<IReleasable>();
+                if (releasable != null)
+                {
+                    releasable.OnRelease();
+                }
+            }
+        }
+
+        prevHolding = isHolding;
+
+        // Se o Api não deve mover o objectToMove, saia cedo
         if (!driveTransform) return;
         if (objectToMove == null) return;
 
-        // Daqui pra baixo é só pra cena RAM (exemplo antigo)
-        // Movimento simples no eixo Z + elevação quando segurar
+        // Movimento simples baseado em currentSide / isHolding (ajuste conforme necessário)
         if (currentSide == "center")
             accumulatedZ = Mathf.Lerp(accumulatedZ, originalPos.z, Time.deltaTime * 5f);
         else if (currentSide == "right")
@@ -114,7 +131,6 @@ public class Api : MonoBehaviour
         objectToMove.transform.position =
             Vector3.Lerp(objectToMove.transform.position, targetPos, Time.deltaTime * 5f);
 
-        // Se quiser rotação especial só na cena RAM, deixe aqui.
         Quaternion targetRot = isHolding
             ? Quaternion.Euler(-90f, originalRot.eulerAngles.y, originalRot.eulerAngles.z)
             : originalRot;

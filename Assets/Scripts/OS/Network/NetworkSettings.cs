@@ -13,6 +13,11 @@ namespace SavitGame.OS.Network {
         public NetworkSettings() { }
         
         public NetworkSettings(NetworkSettings other) {
+            if (other == null) {
+                Debug.LogWarning("NetworkSettings: Tentando copiar de objeto nulo, usando valores padrão");
+                return;
+            }
+            
             ipAddress = other.ipAddress;
             subnetMask = other.subnetMask;
             defaultGateway = other.defaultGateway;

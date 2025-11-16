@@ -47,23 +47,29 @@ namespace SavitGame.OS.Network {
         }
         
         public void ApplyNetworkSettings(NetworkSettings newSettings) {
-            if (!newSettings.ValidateAll()) {
-                ShowStatus("Invalid IP configuration!", true);
-                return;
+            // Criar backup antes de aplicar mudanças
+            if (currentSettings != null) {
+                backupSettings = new NetworkSettings(currentSettings);
             }
             
-            backupSettings = new NetworkSettings(currentSettings);
+            // Aplicar novas configurações
             currentSettings = new NetworkSettings(newSettings);
             currentSettings.SaveToPlayerPrefs();
             
             UpdateAllDisplays();
-            ShowStatus("Network settings applied successfully!", false);
+            ShowStatus("Configurações de rede aplicadas com sucesso!", false);
+            
+            Debug.Log($"Configurações aplicadas:\nDHCP: {currentSettings.useDHCP}\nIP: {currentSettings.ipAddress}");
         }
         
         public void CancelNetworkSettings() {
-            currentSettings = new NetworkSettings(backupSettings);
-            UpdateAllDisplays();
-            ShowStatus("Changes cancelled", false);
+            if (backupSettings != null) {
+                currentSettings = new NetworkSettings(backupSettings);
+                UpdateAllDisplays();
+                ShowStatus("Changes cancelled", false);
+            } else {
+                ShowStatus("No changes to cancel", false);
+            }
         }
         
         public NetworkSettings GetCurrentSettings() {

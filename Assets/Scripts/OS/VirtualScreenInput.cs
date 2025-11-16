@@ -48,6 +48,11 @@ namespace SavitGame.OS {
         }
         
         private void Update() {
+            // Desabilita em modo Overlay - não precisa de conversão de coordenadas
+            if (osCanvas != null && osCanvas.renderMode == RenderMode.ScreenSpaceOverlay) {
+                return;
+            }
+            
             if (!osCanvas.gameObject.activeSelf) return;
             
             // Calibração em tempo real com setas do teclado
